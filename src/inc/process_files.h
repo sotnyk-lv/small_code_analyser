@@ -15,6 +15,7 @@
 #include "inc/CountLines.h"
 
 //std::map<std::string, unsigned long long> CountLines(std::string path);
-void count_lines(std::string path, CountLines counter);
+void count_lines(std::string path, CountLines &counter);
+void count_lines(std::string path, std::mutex & m, std::map<std::string, unsigned long long> & file_data);
 
 #endif //SMALL_CODE_ANALYSER_PROCESS_FILES_H

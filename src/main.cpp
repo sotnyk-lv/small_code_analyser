@@ -20,7 +20,7 @@ void cout_path(std::string path, std::mutex &m) {
 int main() {
 
 //    commented code
-    std::string root_path = "..\\.."; //some comment
+    std::string root_path = "../.."; //some comment
 
     std::vector<std::string> files = get_source_files(root_path);
 
@@ -33,12 +33,19 @@ int main() {
             {"all", 0}
     };
 
+    CountLines counter;
+
     boost::asio::thread_pool pool(4);
     std::mutex m;
     for (auto & file: files) {
-        boost::asio::post(pool, boost::bind(cout_path, file, std::ref(m)));
+//        boost::asio::post(pool, boost::bind(count_lines(file, std::ref(counter))));
+        boost::asio::post(pool, boost::bind(count_lines, file, std::ref(m), std::ref(results)));
     }
     pool.join();
+
+    for (auto &value:results) {
+        std::cout << value.first << " " << value.second << std::endl;
+    }
 
 //    std::vector<std::thread> threads;
 //
