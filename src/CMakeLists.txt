@@ -1,4 +1,4 @@
-set(SOURCES src/read_files.cpp src/process_files.cpp src/CountLines.cpp) # add source files here
+set(SOURCES src/read_files.cpp src/process_files.cpp) # add source files here
 
 include_directories(inc)
 
