@@ -1,9 +1,5 @@
 #include <iostream>
 
-#include "inc/read_files.h"
-#include "inc/process_files.h"
-#include "inc/CountLines.h"
-
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio/thread_pool.hpp>
@@ -11,6 +7,10 @@
 #include <thread>
 #include <mutex>
 
+#include "inc/read_files.h"
+#include "inc/process_files.h"
+#include "inc/CountLines.h"
+#include "time_counting.h"
 
 void cout_path(std::string path, std::mutex &m) {
     std::lock_guard s(m);
