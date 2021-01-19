@@ -1,17 +1,9 @@
 #include <iostream>
 
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/asio/thread_pool.hpp>
 #include <boost/program_options.hpp>
 
-#include <thread>
-#include <mutex>
+#include "CodeAnalyser.h"
 
-#include "read_files.h"
-#include "process_files.h"
-#include "time_counting.h"
-#include "json_saver.h"
 
 int main(int argc, char **argv) {
     //                           <------------ program options ------------>
@@ -44,75 +36,22 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     }
 
-
-
-    std::chrono::high_resolution_clock::time_point start_time, indexing_time, finish_time;
-    start_time = get_current_time_fenced();
-
-    //                        <------------ getting source files ------------>
-    std::vector<std::string> files = get_source_files(root_path);
-
-    std::cout << files.size() << std::endl;
-    indexing_time = get_current_time_fenced();
-
-    std::map<std::string, unsigned long long> results = {
-            {"blank", 0},
-            {"commented", 0},
-            {"code", 0},
-            {"all", 0}
-    };
-
-    int working_threads;
+    unsigned int number_of_active_threads;
     if (vm.count("threads")) {
-        working_threads = vm["threads"].as<int>();
+        number_of_active_threads = vm["threads"].as<int>();
     }
     else {
-        working_threads = std::thread::hardware_concurrency();
+        number_of_active_threads = boost::thread::hardware_concurrency();
     }
 
-    std::cout << working_threads << std::endl;
+    CodeAnalyser analyzer(root_path, number_of_active_threads);
 
-    boost::asio::thread_pool pool(working_threads);
-    std::mutex m;
-    for (auto & file: files) {
-        boost::asio::post(pool, boost::bind(count_lines, file, std::ref(m), std::ref(results)));
-    }
-    pool.join();
-
-    for (auto &value:results) {
-        std::cout << value.first << " " << value.second << std::endl;
-    }
-
-
-
-//    std::vector<std::thread> threads;
-//    std::mutex m;
-//    for (auto & file: files) {
-//        threads.emplace_back(count_lines, file, std::ref(m), std::ref(results));
-//    }
-//    for(auto& thread : threads) {
-//        thread.join();
-//    }
-//    for (auto &value:results) {
-//        std::cout << value.first << " " << value.second << std::endl;
-//    }
-
-    finish_time = get_current_time_fenced();
-    std::cout << to_us(indexing_time - start_time)  <<  std::endl;
-    std::cout << to_us(finish_time - indexing_time)  <<  std::endl;
-    std::cout << to_us(finish_time - start_time)  <<  std::endl;
-
-    std::map<std::string, double> times = {
-            {"parsing directories", to_us(indexing_time - start_time)},
-            {"parsing files", to_us(finish_time - indexing_time)},
-            {"full program", to_us(finish_time - start_time)}
-    };
+    analyzer.analyse_folders();
+    analyzer.print_results();
 
     if (vm.count("save")) {
-        std::cout << "Saving results to: " << vm["save"].as<std::string>() << std::endl;
-        save_json(vm["save"].as<std::string>(),root_path, working_threads, files.size(), results, times);
+        analyzer.save_results(vm["save"].as<std::string>());
     }
-
 
     return 0;
 }
