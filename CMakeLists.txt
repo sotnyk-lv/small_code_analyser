@@ -4,6 +4,7 @@ project(small_code_analyser)
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories(src)
+include_directories(lib/rapidjson/include)
 
 add_subdirectory(src)
 add_subdirectory(tst)
