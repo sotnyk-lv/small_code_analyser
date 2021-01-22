@@ -5,20 +5,20 @@
 #include "CodeAnalyser.h"
 
 CodeAnalyser::CodeAnalyser() {
-    folder_path = ".";
-    number_of_threads = boost::thread::hardware_concurrency();
-    pool = new boost::asio::thread_pool(number_of_threads);
+    data.folder_path = ".";
+    data.number_of_threads = boost::thread::hardware_concurrency();
+    pool = new boost::asio::thread_pool(data.number_of_threads);
 }
 
-CodeAnalyser::CodeAnalyser(std::string & path) {
-    folder_path = path;
-    number_of_threads = boost::thread::hardware_concurrency();
-    pool = new boost::asio::thread_pool(number_of_threads);
+CodeAnalyser::CodeAnalyser(std::string path) {
+    data.folder_path = path;
+    data.number_of_threads = boost::thread::hardware_concurrency();
+    pool = new boost::asio::thread_pool(data.number_of_threads);
 }
 
-CodeAnalyser::CodeAnalyser(std::string & path, unsigned int new_number_of_threads) {
-    folder_path = path;
-    number_of_threads = new_number_of_threads;
+CodeAnalyser::CodeAnalyser(std::string path, unsigned int new_number_of_threads) {
+    data.folder_path = path;
+    data.number_of_threads = new_number_of_threads;
     pool = new boost::asio::thread_pool(new_number_of_threads);
 }
 
@@ -30,13 +30,18 @@ CodeAnalyser::~CodeAnalyser() {
 }
 
 void CodeAnalyser::set_threads_number(unsigned int new_number_of_threads) {
-    number_of_threads = new_number_of_threads;
+    data.number_of_threads = new_number_of_threads;
     delete pool;
     pool = new boost::asio::thread_pool(new_number_of_threads);
 }
 
-void CodeAnalyser::set_file_extension(std::set<std::string> new_extensions) {
-    extensions = new_extensions;
+void CodeAnalyser::set_file_extension(std::set<std::string> & new_extensions) {
+    data.extensions = new_extensions;
+}
+
+void CodeAnalyser::analyse_folders(std::string path) {
+    data.folder_path = path;
+    this->analyse_folders();
 }
 
 void CodeAnalyser::analyse_folders() {
@@ -44,19 +49,19 @@ void CodeAnalyser::analyse_folders() {
     start_time = get_current_time_fenced();
     boost::asio::post(*pool, [this]
     {
-        this->process_folder(this->folder_path);
+        this->process_folder(this->data.folder_path);
     });
 
     (*pool).join();
     finish_time = get_current_time_fenced();
-    parsing_time = to_us(finish_time - start_time);
+    data.parsing_time = to_us(finish_time - start_time);
 
 }
 
 void CodeAnalyser::process_folder(boost::filesystem::path path) {
 
     for (const auto & entry : boost::filesystem::directory_iterator(path, boost::filesystem::directory_options::skip_permission_denied)) {
-        if ( extensions.count( boost::filesystem::extension( entry.path().string() ) ) ) {
+        if ( data.extensions.count( boost::filesystem::extension( entry.path().string() ) ) ) {
             boost::asio::post(*pool, [this, entry]
             {
                 this->process_file(entry.path());
@@ -80,11 +85,10 @@ void CodeAnalyser::process_file(boost::filesystem::path path) {
             {"all", 0}
     };
 
-    ++number_of_file_parsed;
+    ++data.number_of_file_parsed;
 
     boost::filesystem::ifstream file{path};
     std::string str;
-    std::vector<std::string> filenames;
     while(getline(file, str)) {
         ++local_results["all"];
         if (str.find("//") != std::string::npos) {
@@ -115,52 +119,69 @@ void CodeAnalyser::process_file(boost::filesystem::path path) {
             ++local_results["code"];
         }
     }
-    std::lock_guard g(m);
-    for (auto &value : local_results) {
-        results[value.first] += value.second;
-    }
+
+    data.lines.blank += local_results["blank"];
+    data.lines.code += local_results["code"];
+    data.lines.commented += local_results["commented"];
+    data.lines.all += local_results["all"];
+}
+
+void CodeAnalyser::process_file_mmap(boost::filesystem::path path) {
+
+    std::map<std::string, unsigned long long> local_results = {
+            {"blank", 0},
+            {"commented", 0},
+            {"code", 0},
+            {"all", 0}
+    };
+
+    ++data.number_of_file_parsed;
+
+//    unsigned long long
+//        file_size = boost::filesystem::file_size(path),
+//        max_size = static_cast<unsigned long long>(1e9/data.number_of_threads);
+//    unsigned long file_part = 0;
+//
+//    std::string line;
+//
+//    while (file_size - file_part*max_size > 0) {
+//        unsigned long long batch_size = std::min(file_size - file_part*max_size, max_size);
+//        boost::iostreams::mapped_file_source file(path.string(), batch_size, file_part*max_size);
+//        unsigned long long previous_nl = 0;
+//        for (unsigned long long i = 0; i < batch_size; ++i) {
+//            if (file.data()[i] == '\n') {
+//                line = std::string(file.data()[previous_nl], file.data()[i+1]);
+//            }
+//        }
+//
+//        ++file_part;
+//    }
+
+
+    data.lines.blank += local_results["blank"];
+    data.lines.code += local_results["code"];
+    data.lines.commented += local_results["commented"];
+    data.lines.all += local_results["all"];
 }
 
 std::map<std::string, unsigned long long> CodeAnalyser::get_results() {
+    std::map<std::string, unsigned long long> results = {
+            {"blank", data.lines.blank.value()},
+            {"commented", data.lines.commented.value()},
+            {"code", data.lines.code.value()},
+            {"all", data.lines.all.value()}
+    };
     return results;
 }
 
 unsigned long long int CodeAnalyser::get_number_of_files_processed() {
-    return number_of_file_parsed;
+    return data.number_of_file_parsed;
 }
 
 void CodeAnalyser::print_results() {
-    std::cout << "folder parsed: " << folder_path << std::endl;
-    std::cout << "number of files parsed: " << number_of_file_parsed << std::endl;
-    std::cout << "number of threads: " << number_of_threads << std::endl;
-    std::cout << "lines result:" << std::endl;
-    for (auto &value: results) {
-        std::cout << "  " << value.first << " - " << value.second << std::endl;
-    }
-    std::cout << "parsing time: " << parsing_time << "s" << std::endl;
-}
-
-void CodeAnalyser::form_json() {
-    json_obj[ "folder parsed" ] = folder_path;
-    json_obj[ "number of files parsed" ] = number_of_file_parsed;
-    json_obj[ "number of threads" ] = number_of_threads;
-    boost::json::array arr;
-    arr.resize(results.size());
-    int i = 0;
-    for (auto &value: results) {
-        arr[i].emplace_object()[value.first] = value.second;
-        ++i;
-    }
-    json_obj[ "lines" ] = arr;
-
-    json_obj[ "time" ] = parsing_time;
+    data.print_results();
 }
 
 void CodeAnalyser::save_results(std::string savefile_path) {
-    if (json_obj.empty()) {
-        this->form_json();
-    }
-
-    std::ofstream out(savefile_path);
-    out << json_obj << std::endl;
+    data.save_results(savefile_path);
 }

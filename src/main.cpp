@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << "Usage:\n  small_code_analyser <path> [-s savefile]\n" << visible << std::endl;
+        std::cout << "Usage:\n  small_code_analyser <path> [-s/-save savefile] [-t/-threads number_of_threads]\n" << visible << std::endl;
         return EXIT_SUCCESS;
     }
 
