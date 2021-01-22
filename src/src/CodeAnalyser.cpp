@@ -93,14 +93,11 @@ void CodeAnalyser::process_file(boost::filesystem::path path) {
         ++local_results["all"];
         if (str.find("//") != std::string::npos) {
             ++local_results["commented"];
-//            if (!std::all_of(str.begin(),str.begin()+str.find("//"),isspace)) {         //  code + comment handling
-//                ++local_results["code"];
-//            }
         }
         else if (str.find("/*") != std::string::npos) {
             ++local_results["commented"];
             if (str.find("*/") == std::string::npos) {
-                while (getline(file, str)) {                   // TODO: if second while breaks at the end of the file
+                while (getline(file, str)) {
                     if (str.find("*/") == std::string::npos) {
                         ++local_results["commented"];
                         ++local_results["all"];
@@ -119,44 +116,6 @@ void CodeAnalyser::process_file(boost::filesystem::path path) {
             ++local_results["code"];
         }
     }
-
-    data.lines.blank += local_results["blank"];
-    data.lines.code += local_results["code"];
-    data.lines.commented += local_results["commented"];
-    data.lines.all += local_results["all"];
-}
-
-void CodeAnalyser::process_file_mmap(boost::filesystem::path path) {
-
-    std::map<std::string, unsigned long long> local_results = {
-            {"blank", 0},
-            {"commented", 0},
-            {"code", 0},
-            {"all", 0}
-    };
-
-    ++data.number_of_file_parsed;
-
-//    unsigned long long
-//        file_size = boost::filesystem::file_size(path),
-//        max_size = static_cast<unsigned long long>(1e9/data.number_of_threads);
-//    unsigned long file_part = 0;
-//
-//    std::string line;
-//
-//    while (file_size - file_part*max_size > 0) {
-//        unsigned long long batch_size = std::min(file_size - file_part*max_size, max_size);
-//        boost::iostreams::mapped_file_source file(path.string(), batch_size, file_part*max_size);
-//        unsigned long long previous_nl = 0;
-//        for (unsigned long long i = 0; i < batch_size; ++i) {
-//            if (file.data()[i] == '\n') {
-//                line = std::string(file.data()[previous_nl], file.data()[i+1]);
-//            }
-//        }
-//
-//        ++file_part;
-//    }
-
 
     data.lines.blank += local_results["blank"];
     data.lines.code += local_results["code"];

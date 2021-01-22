@@ -61,7 +61,6 @@ private:
 
     // read a file and calculate empty and commented lines as well as lines with code
     void process_file(boost::filesystem::path path);
-    void process_file_mmap(boost::filesystem::path path);
 };
 
 #endif //SMALL_CODE_ANALYSER_CODEANALYSER_H
