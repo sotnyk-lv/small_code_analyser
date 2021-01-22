@@ -15,7 +15,8 @@ int main(int argc, char **argv) {
     visible.add_options()
             ("help,h", "Print this help message.")
             ("save,s",  po::value<std::string>(), "Save results to the file.")
-            ("threads,t", po::value<int>(), "Number of working threads");
+            ("threads,t", po::value<int>(), "Number of working threads")
+            ("extensions,e", po::value<std::vector<std::string>>()->multitoken(), "Extensions of files that need to be parsed");
 
     po::options_description hidden("Hidden options");
     hidden.add_options()
@@ -32,7 +33,7 @@ int main(int argc, char **argv) {
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << "Usage:\n  small_code_analyser <path> [-s/-save savefile] [-t/-threads number_of_threads]\n" << visible << std::endl;
+        std::cout << "Usage:\n  small_code_analyser <path> [-s/--save savefile] [-t/--threads number_of_threads] [-e/--extensions extension_n .. extension_n]\n" << visible << std::endl;
         return EXIT_SUCCESS;
     }
 
@@ -45,6 +46,13 @@ int main(int argc, char **argv) {
     }
 
     CodeAnalyser analyzer(root_path, number_of_active_threads);
+
+    if (vm.count("extensions")) {
+        std::set<std::string> ext(
+                vm["extensions"].as<std::vector<std::string>>().begin(),
+                vm["extensions"].as<std::vector<std::string>>().end());
+        analyzer.set_file_extension(ext);
+    }
 
     analyzer.analyse_folders();
     analyzer.print_results();

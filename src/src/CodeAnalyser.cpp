@@ -35,7 +35,7 @@ void CodeAnalyser::set_threads_number(unsigned int new_number_of_threads) {
     pool = new boost::asio::thread_pool(new_number_of_threads);
 }
 
-void CodeAnalyser::set_file_extension(std::set<std::string> & new_extensions) {
+void CodeAnalyser::set_file_extension(std::set<std::string> new_extensions) {
     data.extensions = new_extensions;
 }
 

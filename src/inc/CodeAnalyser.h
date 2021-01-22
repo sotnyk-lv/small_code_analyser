@@ -31,7 +31,7 @@ public:
     void set_threads_number(unsigned int number_of_threads);
 
     // set extensions of the files that need to bee parsed
-    void set_file_extension(std::set<std::string> & new_extensions);
+    void set_file_extension(std::set<std::string> new_extensions);
 
     // start folder analysing folder
     void analyse_folders();
